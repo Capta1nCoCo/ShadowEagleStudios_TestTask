@@ -1,43 +1,77 @@
-using Unity.VisualScripting;
 using UnityEngine;
+using static Constants.AnimationVarNames;
 
-public class Player : MonoBehaviour
+[RequireComponent(typeof(Animator))]
+public class Player : MonoBehaviour, IDamageable, IAttacker
 {
+    [SerializeField] private float maxHealth;
+    [SerializeField] private float baseDamage = 1;
+    [SerializeField] private float baseAttackSpeed = 1;
+    [SerializeField] private float baseAttackRange = 2;
     [SerializeField] private float movementSpeed = 5f;
+    
+    private Animator _animatorController;
 
-    public float Hp;
-    public float Damage;
-    public float AtackSpeed;
-    public float AttackRange = 2;
+    public float Health { get; set; }
+    public bool IsDead { get; set; }
+    public float Damage { get; set; }
+    public float AttackSpeed { get; set; }
+    public float AttackRange { get; set; }
+    public float LastAttackTime { get; set; }
 
-    private float lastAttackTime = 0;
-    private bool isDead = false;
-    public Animator AnimatorController;
+    private void Awake()
+    {
+        _animatorController = GetComponent<Animator>();
+    }
+
+    private void Start()
+    {
+        Init();
+    }
+
+    private void Init()
+    {
+        Health = maxHealth;
+        IsDead = false;
+        Damage = baseDamage;
+        AttackSpeed = baseAttackSpeed;
+        AttackRange = baseAttackRange;
+        LastAttackTime = 0;
+    }
 
     private void Update()
     {
-        if (isDead)
-        {
-            return;
-        }
-
-        if (Hp <= 0)
-        {
-            Die();
-            return;
-        }
-
-        //Enemie closestEnemie = FindClosestEnemy();
-
-        AttackClosestEnemy(FindClosestEnemy());
-
+        if (IsDead) { return; }
+        Attack();
         Move();
     }
 
-    private Enemie FindClosestEnemy()
+    public void TakeDamage(float damage)
+    {
+        if (IsDead) { return; }
+        Health -= damage;
+        if (Health <= 0)
+        {
+            Die();
+        }
+    }
+
+    public void Die()
+    {
+        IsDead = true;
+        _animatorController.SetTrigger(Universal.Die);
+        SceneManager.Instance.GameOver();
+    }
+
+    public void Attack()
+    {
+        LockOnClosestEnemy(FindClosestEnemy());
+    }
+
+    private Enemy FindClosestEnemy()
     {
         var enemies = SceneManager.Instance.Enemies;
-        Enemie closestEnemie = null;
+        Enemy closestEnemie = null;
 
         for (int i = 0; i < enemies.Count; i++)
         {
@@ -66,45 +100,40 @@ public class Player : MonoBehaviour
         return closestEnemie;
     }
 
-    private void AttackClosestEnemy(Enemie closestEnemie)
+    private void LockOnClosestEnemy(Enemy closestEnemie)
     {
         if (closestEnemie != null)
         {
             var distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-            bool isAttackOffCooldown = Time.time - lastAttackTime > AtackSpeed;
-
-            if (Input.GetKeyDown(KeyCode.Mouse0))
-            {
-                if (distance <= AttackRange)
-                {
-                    if (isAttackOffCooldown)
-                    {
-                        transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
-                        ProcessAttackWithCooldown();
-                        closestEnemie.Hp -= Damage;
-                    }
-                }
-                else if (isAttackOffCooldown)
-                {
-                    ProcessAttackWithCooldown();
-                }
-            }
-            
-        }
-
-        void ProcessAttackWithCooldown()
-        {
-            lastAttackTime = Time.time;
-            AnimatorController.SetTrigger("Attack");
+            transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
+            ProcessAttack(closestEnemie, distance);
         }
     }
 
-    private void Die()
+    private void ProcessAttack(Enemy closestEnemie, float distance)
     {
-        isDead = true;
-        AnimatorController.SetTrigger("Die");
+        bool isAttackOffCooldown = Time.time - LastAttackTime > baseAttackSpeed;
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            if (distance <= baseAttackRange)
+            {
+                if (isAttackOffCooldown)
+                {
+                    AttackWithCooldown();
+                    closestEnemie.TakeDamage(baseDamage);
+                }
+            }
+            else if (isAttackOffCooldown)
+            {
+                AttackWithCooldown();
+            }
+        }
+    }
 
-        SceneManager.Instance.GameOver();
+    private void AttackWithCooldown()
+    {
+        LastAttackTime = Time.time;
+        _animatorController.SetTrigger("Attack");
     }
 
     private void Move()
@@ -121,5 +150,13 @@ public class Player : MonoBehaviour
         float rawZPos = transform.localPosition.z + zOffset;
 
         transform.localPosition = new Vector3(rawXPos, transform.localPosition.y, rawZPos);
+
+        ApplyMovementAnimation(xInput, zInput);
+    }
+
+    private void ApplyMovementAnimation(float xInput, float zInput)
+    {
+        float speed = xInput > 0 || zInput > 0 ? movementSpeed : 0;
+        _animatorController.SetFloat(Universal.Speed, speed);
     }
 }

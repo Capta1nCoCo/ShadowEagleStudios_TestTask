@@ -77,7 +77,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: -927199367670048503, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 977492468783751975}
+      addedObject: {fileID: 9057732657656489015}
     - targetCorrespondingSourceObject: {fileID: -927199367670048503, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8767279960998370427}
@@ -87,7 +87,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: -927199367670048503, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
   m_PrefabInstance: {fileID: 5498221187278891771}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &977492468783751975
+--- !u!114 &9057732657656489015
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -99,11 +99,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c2a8ee85d515c343a70e9b80700c61a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Hp: 2
+  maxHealth: 2
   Damage: 1
   AtackSpeed: 1
-  AnimatorController: {fileID: 7475179364339281051}
-  Agent: {fileID: 8767279960998370427}
+  AttackRange: 2
 --- !u!195 &8767279960998370427
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -126,8 +125,3 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!95 &7475179364339281051 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: -6057140222963153312, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
-  m_PrefabInstance: {fileID: 5498221187278891771}
-  m_PrefabAsset: {fileID: 0}

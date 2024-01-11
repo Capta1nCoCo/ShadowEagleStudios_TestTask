@@ -79,11 +79,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 5115665549051153157}
   m_SourcePrefab: {fileID: 100100000, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
---- !u!95 &2111518244622979505 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: -6057140222963153312, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
-  m_PrefabInstance: {fileID: 3944354653735442385}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &5016100408427286232 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -927199367670048503, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
@@ -101,8 +96,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d0d768a0d357334286e5a146ac21b9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Hp: 10
+  maxHealth: 10
   Damage: 1
   AtackSpeed: 1
   AttackRange: 2
-  AnimatorController: {fileID: 2111518244622979505}
+  movementSpeed: 5
