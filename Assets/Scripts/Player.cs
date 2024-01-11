@@ -1,14 +1,15 @@
+using System.Collections.Generic;
 using UnityEngine;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator))]
-public class Player : MonoBehaviour, IDamageable, IAttacker
+public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
 {
     [SerializeField] private float maxHealth;
     [SerializeField] private float baseDamage = 1;
     [SerializeField] private float baseAttackSpeed = 1;
     [SerializeField] private float baseAttackRange = 2;
-    [SerializeField] private float movementSpeed = 5f;
+    [SerializeField] private float baseMovementSpeed = 5f;
     
     private Animator _animatorController;
 
@@ -18,6 +19,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
     public float AttackSpeed { get; set; }
     public float AttackRange { get; set; }
     public float LastAttackTime { get; set; }
+    public float MovementSpeed { get; set; }
 
     private void Awake()
     {
@@ -37,6 +39,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
         AttackSpeed = baseAttackSpeed;
         AttackRange = baseAttackRange;
         LastAttackTime = 0;
+        MovementSpeed = baseMovementSpeed;
     }
 
     private void Update()
@@ -70,7 +73,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
 
     private Enemy FindClosestEnemy()
     {
-        var enemies = SceneManager.Instance.Enemies;
+        List<Enemy> enemies = SceneManager.Instance.Enemies;
         Enemy closestEnemie = null;
 
         for (int i = 0; i < enemies.Count; i++)
@@ -87,14 +90,12 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
                 continue;
             }
 
-            var distance = Vector3.Distance(transform.position, enemie.transform.position);
-            var closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-
+            float distance = Vector3.Distance(transform.position, enemie.transform.position);
+            float closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
             if (distance < closestDistance)
             {
                 closestEnemie = enemie;
             }
-
         }
 
         return closestEnemie;
@@ -104,7 +105,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
     {
         if (closestEnemie != null)
         {
-            var distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
+            float distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
             transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
             ProcessAttack(closestEnemie, distance);
         }
@@ -112,39 +113,67 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
 
     private void ProcessAttack(Enemy closestEnemie, float distance)
     {
-        bool isAttackOffCooldown = Time.time - LastAttackTime > baseAttackSpeed;
+        bool isAttackOffCooldown = IsOffCooldown(baseAttackSpeed);
+        bool isInAttackRange = distance <= baseAttackRange;
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            if (distance <= baseAttackRange)
+            RegularAttack(closestEnemie, isAttackOffCooldown, isInAttackRange);
+        }
+        else if (Input.GetKeyDown(KeyCode.Mouse1))
+        {
+            SuperAttack(closestEnemie, isInAttackRange);
+        }
+    }
+
+    private void RegularAttack(Enemy closestEnemie, bool isAttackOffCooldown, bool isInAttackRange)
+    {
+        if (isInAttackRange)
+        {
+            if (isAttackOffCooldown)
             {
-                if (isAttackOffCooldown)
-                {
-                    AttackWithCooldown();
-                    closestEnemie.TakeDamage(baseDamage);
-                }
+                AttackWithCooldown(Universal.Attack);
+                closestEnemie.TakeDamage(baseDamage);
             }
-            else if (isAttackOffCooldown)
+        }
+        else if (isAttackOffCooldown)
+        {
+            AttackWithCooldown(Universal.Attack);
+        }
+    }
+
+    private void SuperAttack(Enemy closestEnemie, bool isInAttackRange)
+    {
+        const float superAttackMultiplier = 2;
+        if (isInAttackRange)
+        {
+            if (IsOffCooldown(AttackSpeed * superAttackMultiplier))
             {
-                AttackWithCooldown();
+                AttackWithCooldown(PlayerCharacter.SuperAttack);
+                closestEnemie.TakeDamage(baseDamage * superAttackMultiplier);
             }
         }
     }
 
-    private void AttackWithCooldown()
+    private bool IsOffCooldown(float cooldown)
     {
-        LastAttackTime = Time.time;
-        _animatorController.SetTrigger("Attack");
+        return Time.time - LastAttackTime > cooldown;
     }
 
-    private void Move()
+    private void AttackWithCooldown(string attackName)
+    {
+        LastAttackTime = Time.time;
+        _animatorController.SetTrigger(attackName);
+    }
+
+    public void Move()
     {
         float xInput = Input.GetAxis("Horizontal");
         float zInput = Input.GetAxis("Vertical");
 
         Vector2 inputNormalized = new Vector2(xInput, zInput).normalized;
 
-        float xOffset = inputNormalized.x * movementSpeed * Time.deltaTime;
-        float zOffset = inputNormalized.y * movementSpeed * Time.deltaTime;
+        float xOffset = inputNormalized.x * MovementSpeed * Time.deltaTime;
+        float zOffset = inputNormalized.y * MovementSpeed * Time.deltaTime;
 
         float rawXPos = transform.localPosition.x + xOffset;
         float rawZPos = transform.localPosition.z + zOffset;
@@ -156,7 +185,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker
 
     private void ApplyMovementAnimation(float xInput, float zInput)
     {
-        float speed = xInput > 0 || zInput > 0 ? movementSpeed : 0;
-        _animatorController.SetFloat(Universal.Speed, speed);
+        float currentSpeed = Mathf.Abs(xInput) > 0 || Mathf.Abs(zInput) > 0 ? MovementSpeed : 0;
+        _animatorController.SetFloat(Universal.Speed, currentSpeed);
     }
 }

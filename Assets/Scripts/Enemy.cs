@@ -3,7 +3,7 @@ using UnityEngine.AI;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
-public class Enemy : MonoBehaviour, IDamageable, IAttacker
+public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 {
     [SerializeField] private float maxHealth;
     [SerializeField] private float baseDamage = 1;
@@ -19,6 +19,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker
     public float AttackSpeed { get; set; }
     public float AttackRange { get; set; }
     public float LastAttackTime { get; set; }
+    public float MovementSpeed { get; set; }
 
     private void Awake()
     {
@@ -40,26 +41,14 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker
         Damage = baseDamage;
         AttackSpeed = baseAttackSpeed;
         AttackRange = baseAttackRange;
+        LastAttackTime = 0;
+        MovementSpeed = 0;
     }
 
     private void Update()
     {
         if (IsDead) { return; }
-
-        var distance = Vector3.Distance(transform.position, SceneManager.Instance.Player.transform.position);
-     
-        if (distance <= AttackRange)
-        {
-            _navMeshAgent.isStopped = true;
-            Attack();
-        }
-        else
-        {
-            _navMeshAgent.isStopped = false;
-            _navMeshAgent.SetDestination(SceneManager.Instance.Player.transform.position);
-        }
-        _animatorController.SetFloat(Universal.Speed, _navMeshAgent.speed);
-        //Debug.Log(Agent.speed);
+        AI();
     }
 
     public void TakeDamage(float damage)
@@ -80,6 +69,27 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker
         _navMeshAgent.isStopped = true;
     }
 
+    private void AI()
+    {
+        float distance = Vector3.Distance(transform.position, SceneManager.Instance.Player.transform.position);
+        if (distance <= AttackRange)
+        {
+            AutoAttacking();
+        }
+        else
+        {
+            Move();
+        }
+        ApplyMovementAnimation();
+    }
+
+    private void AutoAttacking()
+    {
+        _navMeshAgent.isStopped = true;
+        MovementSpeed = 0;
+        Attack();
+    }
+
     public void Attack()
     {
         if (Time.time - LastAttackTime > AttackSpeed)
@@ -88,5 +98,17 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker
             SceneManager.Instance.Player.TakeDamage(Damage);
             _animatorController.SetTrigger(Universal.Attack);
         }
+    }
+
+    public void Move()
+    {
+        _navMeshAgent.isStopped = false;
+        MovementSpeed = _navMeshAgent.speed;
+        _navMeshAgent.SetDestination(SceneManager.Instance.Player.transform.position);
+    }
+
+    private void ApplyMovementAnimation()
+    {
+        _animatorController.SetFloat(Universal.Speed, MovementSpeed);
     }
 }

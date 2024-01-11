@@ -11,7 +11,7 @@ PrefabInstance:
     - target: {fileID: -6057140222963153312, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: 1d6a3a495edbf24439b7f6ca0d94afd8, type: 2}
+      objectReference: {fileID: 9100000, guid: de609329802a662439da0f32f08c92b2, type: 2}
     - target: {fileID: -4216859302048453862, guid: cb01db2707aa97a4e94efee03de71f52, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.02
@@ -97,7 +97,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 10
-  Damage: 1
-  AtackSpeed: 1
-  AttackRange: 2
-  movementSpeed: 5
+  baseDamage: 1
+  baseAttackSpeed: 1
+  baseAttackRange: 2
+  baseMovementSpeed: 5
