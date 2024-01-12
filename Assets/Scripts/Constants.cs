@@ -7,6 +7,7 @@ public static class Constants
             public const string Attack = "Attack";
             public const string Die = "Die";
             public const string Speed = "Speed";
+            public const string Idle = "idle";
         }
 
         public static class PlayerCharacter

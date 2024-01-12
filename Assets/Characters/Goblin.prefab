@@ -100,9 +100,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 2
-  Damage: 1
-  AtackSpeed: 1
-  AttackRange: 2
+  baseDamage: 1
+  baseAttackSpeed: 1
+  baseAttackRange: 2
 --- !u!195 &8767279960998370427
 NavMeshAgent:
   m_ObjectHideFlags: 0

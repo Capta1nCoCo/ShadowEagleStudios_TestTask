@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Zenject;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator))]
 public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
 {
+    public static Player Instance { get; private set; }
+
     [SerializeField] private float maxHealth;
     [SerializeField] private float baseDamage = 1;
     [SerializeField] private float baseAttackSpeed = 1;
@@ -12,6 +15,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
     [SerializeField] private float baseMovementSpeed = 5f;
     
     private Animator _animatorController;
+    private EnemySpawner _enemySpawner;
 
     public float Health { get; set; }
     public bool IsDead { get; set; }
@@ -21,9 +25,28 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
     public float LastAttackTime { get; set; }
     public float MovementSpeed { get; set; }
 
+    [Inject]
+    public void InjectDependencies(EnemySpawner enemySpawner)
+    {
+        _enemySpawner = enemySpawner;
+    }
+
     private void Awake()
     {
         _animatorController = GetComponent<Animator>();
+        ApplySingleton();
+    }
+
+    private void ApplySingleton()
+    {
+        if (FindObjectsOfType(GetType()).Length > 1)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
     }
 
     private void Start()
@@ -63,7 +86,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
     {
         IsDead = true;
         _animatorController.SetTrigger(Universal.Die);
-        SceneManager.Instance.GameOver();
+        GameEvents.OnDefeat?.Invoke();
     }
 
     public void Attack()
@@ -73,7 +96,7 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     private Enemy FindClosestEnemy()
     {
-        List<Enemy> enemies = SceneManager.Instance.Enemies;
+        List<Enemy> enemies = _enemySpawner.getEnemies;
         Enemy closestEnemie = null;
 
         for (int i = 0; i < enemies.Count; i++)

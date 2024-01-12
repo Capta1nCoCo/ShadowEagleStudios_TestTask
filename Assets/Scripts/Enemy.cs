@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.AI;
+using Zenject;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
@@ -12,6 +14,8 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     private Animator _animatorController;
     private NavMeshAgent _navMeshAgent;
+    private EnemySpawner _enemySpawner;
+    private Player _player;
 
     public float Health { get; set; }
     public bool IsDead { get; set; }
@@ -27,14 +31,20 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         _navMeshAgent = GetComponent<NavMeshAgent>();
     }
 
-    private void Start()
+    public void Init(EnemySpawner enemySpawner)
     {
-        SceneManager.Instance.AddEnemie(this);
-        _navMeshAgent.SetDestination(SceneManager.Instance.Player.transform.position);
-        Init();
+        if (_enemySpawner == null)
+        {
+            _enemySpawner = enemySpawner;
+            _player = Player.Instance;
+        }
+        _enemySpawner.AddEnemie(this);
+        _navMeshAgent.SetDestination(_player.transform.position);
+        InitStats();
+        ResetForReuse();
     }
 
-    private void Init()
+    private void InitStats()
     {
         Health = maxHealth;
         IsDead = false;
@@ -43,6 +53,12 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         AttackRange = baseAttackRange;
         LastAttackTime = 0;
         MovementSpeed = 0;
+    }
+
+    private void ResetForReuse()
+    {
+        _animatorController.Play(Universal.Idle);
+        _navMeshAgent.isStopped = false;
     }
 
     private void Update()
@@ -63,7 +79,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     public void Die()
     {
-        SceneManager.Instance.RemoveEnemie(this);
+        _enemySpawner.RemoveEnemie(this);
         IsDead = true;
         _animatorController.SetTrigger(Universal.Die);
         _navMeshAgent.isStopped = true;
@@ -71,7 +87,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     private void AI()
     {
-        float distance = Vector3.Distance(transform.position, SceneManager.Instance.Player.transform.position);
+        float distance = Vector3.Distance(transform.position, _player.transform.position);
         if (distance <= AttackRange)
         {
             AutoAttacking();
@@ -95,7 +111,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         if (Time.time - LastAttackTime > AttackSpeed)
         {
             LastAttackTime = Time.time;
-            SceneManager.Instance.Player.TakeDamage(Damage);
+            _player.TakeDamage(Damage);
             _animatorController.SetTrigger(Universal.Attack);
         }
     }
@@ -104,7 +120,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
     {
         _navMeshAgent.isStopped = false;
         MovementSpeed = _navMeshAgent.speed;
-        _navMeshAgent.SetDestination(SceneManager.Instance.Player.transform.position);
+        _navMeshAgent.SetDestination(_player.transform.position);
     }
 
     private void ApplyMovementAnimation()

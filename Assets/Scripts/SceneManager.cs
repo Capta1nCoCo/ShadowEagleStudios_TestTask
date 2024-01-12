@@ -1,40 +1,20 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SceneManager : MonoBehaviour
 {
-    public static SceneManager Instance;
-
-    public Player Player;
-    public List<Enemy> Enemies;
-    public GameObject Lose;
-    public GameObject Win;
-
-    private int currWave = 0;
-    [SerializeField] private LevelConfig Config;
+    [SerializeField] private GameObject Lose;
+    [SerializeField] private GameObject Win;
 
     private void Awake()
     {
-        Instance = this;
+        GameEvents.OnVictory += Victory;
+        GameEvents.OnDefeat += GameOver;
     }
 
-    private void Start()
+    private void OnDestroy()
     {
-        SpawnWave();
-    }
-
-    public void AddEnemie(Enemy enemie)
-    {
-        Enemies.Add(enemie);
-    }
-
-    public void RemoveEnemie(Enemy enemie)
-    {
-        Enemies.Remove(enemie);
-        if(Enemies.Count == 0)
-        {
-            SpawnWave();
-        }
+        GameEvents.OnVictory -= Victory;
+        GameEvents.OnDefeat -= GameOver;
     }
 
     public void GameOver()
@@ -42,22 +22,9 @@ public class SceneManager : MonoBehaviour
         Lose.SetActive(true);
     }
 
-    private void SpawnWave()
+    public void Victory()
     {
-        if (currWave >= Config.Waves.Length)
-        {
-            Win.SetActive(true);
-            return;
-        }
-
-        var wave = Config.Waves[currWave];
-        foreach (var character in wave.Characters)
-        {
-            Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
-            Instantiate(character, pos, Quaternion.identity);
-        }
-        currWave++;
-
+        Win.SetActive(true);
     }
 
     public void Reset()
