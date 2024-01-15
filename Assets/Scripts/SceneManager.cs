@@ -17,16 +17,17 @@ public class SceneManager : MonoBehaviour
         GameEvents.OnDefeat -= GameOver;
     }
 
-    public void GameOver()
+    private void GameOver()
     {
         Lose.SetActive(true);
     }
 
-    public void Victory()
+    private void Victory()
     {
         Win.SetActive(true);
     }
 
+    // Used by OnClick() event
     public void Reset()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene(0);

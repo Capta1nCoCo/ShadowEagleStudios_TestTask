@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Zenject;
 
 [RequireComponent(typeof(EnemyPool))]
 public class EnemySpawner : MonoBehaviour
@@ -41,7 +40,8 @@ public class EnemySpawner : MonoBehaviour
 
     private void SpawnWave()
     {
-        if (currWave >= Config.getWaves.Length)
+        int numWaves = Config.getWaves.Length;
+        if (currWave >= numWaves)
         {
             GameEvents.OnVictory?.Invoke();
             return;
@@ -65,5 +65,6 @@ public class EnemySpawner : MonoBehaviour
             }
         }
         currWave++;
+        GameEvents.OnWaveSpawned?.Invoke(currWave, numWaves);
     }
 }
