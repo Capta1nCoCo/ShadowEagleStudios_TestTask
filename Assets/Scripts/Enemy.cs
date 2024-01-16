@@ -1,12 +1,11 @@
-using System.ComponentModel;
 using UnityEngine;
 using UnityEngine.AI;
-using Zenject;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
 public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 {
+    [Header("Base Stats")]
     [SerializeField] private float maxHealth;
     [SerializeField] private float baseDamage = 1;
     [SerializeField] private float baseAttackSpeed = 1;
@@ -38,7 +37,7 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
             _enemySpawner = enemySpawner;
             _player = Player.Instance;
         }
-        _enemySpawner.AddEnemie(this);
+        _enemySpawner.AddEnemy(this);
         _navMeshAgent.SetDestination(_player.transform.position);
         InitStats();
         ResetForReuse();
@@ -79,10 +78,11 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     public void Die()
     {
-        _enemySpawner.RemoveEnemie(this);
+        _enemySpawner.RemoveEnemy(this);
         IsDead = true;
         _animatorController.SetTrigger(Universal.Die);
         _navMeshAgent.isStopped = true;
+        GameEvents.OnEnemyDeath?.Invoke();
     }
 
     private void AI()

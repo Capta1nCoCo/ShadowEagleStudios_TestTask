@@ -14,12 +14,12 @@ public class EnemySpawner : MonoBehaviour
 
     public List<Enemy> getEnemies { get { return Enemies; } }
 
-    public void AddEnemie(Enemy enemy)
+    public void AddEnemy(Enemy enemy)
     {
         Enemies.Add(enemy);
     }
 
-    public void RemoveEnemie(Enemy enemy)
+    public void RemoveEnemy(Enemy enemy)
     {
         Enemies.Remove(enemy);
         if (Enemies.Count == 0)
@@ -54,17 +54,22 @@ public class EnemySpawner : MonoBehaviour
             EnemyType enemyType = enemyParams.getEnemyType;
             if (enemyQuantity > 0 && enemyType != EnemyType.None)
             {
-                for (int i = 0; i < enemyQuantity; i++)
-                {
-                    Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
-                    var enemy = _enemyPool.GetEnemyByType(enemyType);
-                    enemy.transform.position = pos;
-                    enemy.transform.rotation = Quaternion.identity;
-                    enemy.GetComponent<Enemy>()?.Init(this);
-                }
+                SpawnEnemies(enemyQuantity, enemyType);
             }
         }
         currWave++;
         GameEvents.OnWaveSpawned?.Invoke(currWave, numWaves);
+    }
+
+    private void SpawnEnemies(int enemyQuantity, EnemyType enemyType)
+    {
+        for (int i = 0; i < enemyQuantity; i++)
+        {
+            Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
+            var enemy = _enemyPool.GetEnemyByType(enemyType);
+            enemy.transform.position = pos;
+            enemy.transform.rotation = Quaternion.identity;
+            enemy.GetComponent<Enemy>()?.Init(this);
+        }
     }
 }

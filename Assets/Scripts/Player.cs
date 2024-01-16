@@ -9,13 +9,20 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
 {
     public static Player Instance { get; private set; }
 
+    [SerializeField] private float baseMovementSpeed = 5f;
+
+    [Header("Health Stats")]
     [SerializeField] private float maxHealth;
+    [SerializeField] private float healthOnKill = 1;
+
+    [Header("Basic Attack")]
     [SerializeField] private float baseDamage = 1;
     [SerializeField] private float baseAttackSpeed = 1;
     [SerializeField] private float baseAttackRange = 2;
-    [SerializeField] private float baseMovementSpeed = 5f;
-    [SerializeField] private float superAttackSpeed = 2;
+
+    [Header("Super Attack")]
     [SerializeField] private float superDamage = 2;
+    [SerializeField] private float superAttackSpeed = 2;
 
     private Enemy closestEnemie;
     private float distance;
@@ -44,6 +51,25 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
     {
         _animatorController = GetComponent<Animator>();
         ApplySingleton();
+        GameEvents.OnEnemyDeath += RestoreHealth;
+    }
+
+    private void OnDestroy()
+    {
+        GameEvents.OnEnemyDeath -= RestoreHealth;
+    }
+
+    private void Start()
+    {
+        Init();
+    }
+
+    private void Update()
+    {
+        if (IsDead) { return; }
+        GameEvents.OnCooldown?.Invoke();
+        FindClosestEnemy();
+        Move();
     }
 
     private void ApplySingleton()
@@ -58,12 +84,13 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
         }
     }
 
-    private void Start()
+    private void Init()
     {
-        Init();
+        AssignStats();
+        InvokeInitEvents();
     }
 
-    private void Init()
+    private void AssignStats()
     {
         Health = maxHealth;
         IsDead = false;
@@ -75,16 +102,12 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
         SuperAttackSpeed = superAttackSpeed;
         SuperAttackDamage = superDamage;
         LastSuperTime = 0;
-        GameEvents.OnHealthChanged?.Invoke(Health);
-        GameEvents.OnPlayerInit?.Invoke();
     }
 
-    private void Update()
+    private void InvokeInitEvents()
     {
-        if (IsDead) { return; }
-        GameEvents.OnCooldown?.Invoke();
-        FindClosestEnemy();
-        Move();
+        GameEvents.OnHealthChanged?.Invoke(Health);
+        GameEvents.OnPlayerInit?.Invoke();
     }
 
     public void TakeDamage(float damage)
@@ -105,6 +128,16 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
         GameEvents.OnDefeat?.Invoke();
     }
 
+    private void RestoreHealth()
+    {
+        Health += healthOnKill;
+        if (Health > maxHealth)
+        {
+            Health = maxHealth;
+        }
+        GameEvents.OnHealthChanged?.Invoke(Health);
+    }
+
     private void FindClosestEnemy()
     {
         List<Enemy> enemies = _enemySpawner.getEnemies;
@@ -112,27 +145,32 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
 
         for (int i = 0; i < enemies.Count; i++)
         {
-            var enemie = enemies[i];
-            if (enemie == null)
+            var enemy = enemies[i];
+            if (enemy == null)
             {
                 continue;
             }
 
             if (closestEnemie == null)
             {
-                closestEnemie = enemie;
+                closestEnemie = enemy;
                 continue;
             }
 
-            float distance = Vector3.Distance(transform.position, enemie.transform.position);
-            float closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-            if (distance < closestDistance)
-            {
-                closestEnemie = enemie;
-            }
+            AssignClosestEnemy(enemy);
         }
 
         LockOnClosestEnemy();
+    }
+
+    private void AssignClosestEnemy(Enemy enemie)
+    {
+        float distance = Vector3.Distance(transform.position, enemie.transform.position);
+        float closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
+        if (distance < closestDistance)
+        {
+            closestEnemie = enemie;
+        }
     }
 
     private void LockOnClosestEnemy()

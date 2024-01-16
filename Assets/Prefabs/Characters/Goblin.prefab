@@ -103,6 +103,8 @@ MonoBehaviour:
   baseDamage: 1
   baseAttackSpeed: 1
   baseAttackRange: 2
+  healPlayerOnDeath: 1
+  healOnDeath: 1
 --- !u!195 &8767279960998370427
 NavMeshAgent:
   m_ObjectHideFlags: 0
