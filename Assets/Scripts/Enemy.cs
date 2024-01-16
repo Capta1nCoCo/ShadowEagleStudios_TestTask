@@ -11,6 +11,8 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
     [SerializeField] private float baseAttackSpeed = 1;
     [SerializeField] private float baseAttackRange = 2;
 
+    [SerializeField] private DeathSpawner spawn;
+
     private Animator _animatorController;
     private NavMeshAgent _navMeshAgent;
     private EnemySpawner _enemySpawner;
@@ -83,6 +85,11 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         _animatorController.SetTrigger(Universal.Die);
         _navMeshAgent.isStopped = true;
         GameEvents.OnEnemyDeath?.Invoke();
+        // TODO: Decouple
+        if (spawn != null)
+        {
+            spawn.SpawnEnemiesInDeathArea();
+        }
     }
 
     private void AI()

@@ -1,5 +1,6 @@
 ﻿public enum EnemyType
 {
     None,
-    Goblin
+    Goblin,
+    HobGoblin
 }

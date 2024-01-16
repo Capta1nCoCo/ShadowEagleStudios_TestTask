@@ -4,8 +4,10 @@ using UnityEngine;
 public class EnemyPool : ObjectPool
 {
     [SerializeField] private GameObject goblinPrefab;
+    [SerializeField] private GameObject hobGoblinPrefab;
 
     private Queue<GameObject> goblinPool = new Queue<GameObject>();
+    private Queue<GameObject> hobGoblinPool = new Queue<GameObject>();
 
     private void Awake()
     {
@@ -15,6 +17,7 @@ public class EnemyPool : ObjectPool
     protected override void PopulatePools()
     {
         SpawnPoolObjects(goblinPrefab, goblinPool);
+        SpawnPoolObjects(hobGoblinPrefab, hobGoblinPool);
     }
 
     public GameObject GetEnemyByType(EnemyType type)
@@ -23,6 +26,9 @@ public class EnemyPool : ObjectPool
         {
             case EnemyType.Goblin: 
                 return GetObjectFromPool(goblinPool);
+
+            case EnemyType.HobGoblin:
+                return GetObjectFromPool(hobGoblinPool);
 
             default: 
                 return null;

@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Wave1
   m_EditorClassIdentifier: Assembly-CSharp::Wave
   EnemyParams:
-  - enemyType: 1
+  - enemyType: 2
     quantity: 1
