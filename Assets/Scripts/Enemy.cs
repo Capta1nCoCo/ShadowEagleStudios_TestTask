@@ -2,7 +2,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using static Constants.AnimationVarNames;
-using static UnityEditor.PlayerSettings;
 
 [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
 public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable, ISpawn
