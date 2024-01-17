@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AttackButton : ButtonBase
 {
@@ -20,11 +21,12 @@ public class AttackButton : ButtonBase
     private AttackHandler attackHandler;
 
     private ISuperAttacker _player;
+    private Image _buttonBackground;
 
     protected override void Awake()
     {
         base.Awake();
-        buttonText = displayText.text;
+        _buttonBackground = GetComponent<Image>();
         GameEvents.OnCooldown += UpdateCooldownDisplay;
         GameEvents.OnPlayerInit += InitByAttackType;
     }
@@ -35,11 +37,25 @@ public class AttackButton : ButtonBase
         GameEvents.OnPlayerInit -= InitByAttackType;
     }
 
+    private void Start()
+    {
+        buttonText = displayText.text;
+    }
+
     private void UpdateCooldownDisplay()
     {
         float time = Time.time;
         float cooldown = type == AttackType.Normal ? time - _player.LastAttackTime : time - _player.LastSuperTime;
-        displayText.text = skillCooldown >= cooldown ? cooldown.ToString() : buttonText;
+        bool isOnCooldown = skillCooldown >= cooldown;
+        displayText.text = isOnCooldown ? cooldown.ToString() : buttonText;
+        ChangeButtonTransparency(isOnCooldown);
+    }
+
+    private void ChangeButtonTransparency(bool isOnCooldown)
+    {
+        Color cdColor = _buttonBackground.color;
+        cdColor.a = isOnCooldown ? 0.3f : 1f;
+        _buttonBackground.color = cdColor;
     }
 
     protected override void Execute()

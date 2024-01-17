@@ -97,7 +97,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 10
+  baseMovementSpeed: 5
   baseDamage: 1
   baseAttackSpeed: 1
   baseAttackRange: 2
-  baseMovementSpeed: 5
+  superDamage: 2
+  superAttackSpeed: 2

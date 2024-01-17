@@ -6,4 +6,5 @@ public interface IAttacker
     public float LastAttackTime { get; set; }
 
     public void Attack();
+    public void DealDamage();
 }

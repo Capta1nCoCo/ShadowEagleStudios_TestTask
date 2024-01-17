@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using Zenject;
 using static Constants.AnimationVarNames;
@@ -9,11 +8,9 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
 {
     public static Player Instance { get; private set; }
 
-    [SerializeField] private float baseMovementSpeed = 5f;
-
-    [Header("Health Stats")]
+    [Header("General Stats")]
     [SerializeField] private float maxHealth;
-    [SerializeField] private float healthOnKill = 1;
+    [SerializeField] private float baseMovementSpeed = 5f;
 
     [Header("Basic Attack")]
     [SerializeField] private float baseDamage = 1;
@@ -26,6 +23,8 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
 
     private Enemy closestEnemie;
     private float distance;
+    private bool isAttacking;
+    private bool isSuperAttacking;
 
     private Animator _animatorController;
     private EnemySpawner _enemySpawner;
@@ -51,12 +50,6 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
     {
         _animatorController = GetComponent<Animator>();
         ApplySingleton();
-        GameEvents.OnEnemyDeath += RestoreHealth;
-    }
-
-    private void OnDestroy()
-    {
-        GameEvents.OnEnemyDeath -= RestoreHealth;
     }
 
     private void Start()
@@ -68,7 +61,10 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
     {
         if (IsDead) { return; }
         GameEvents.OnCooldown?.Invoke();
-        FindClosestEnemy();
+        if (!isAttacking || !isSuperAttacking)
+        {
+            FindClosestEnemy();
+        }
         Move();
     }
 
@@ -128,9 +124,9 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
         GameEvents.OnDefeat?.Invoke();
     }
 
-    private void RestoreHealth()
+    public void RestoreHealth(float amount)
     {
-        Health += healthOnKill;
+        Health += amount;
         if (Health > maxHealth)
         {
             Health = maxHealth;
@@ -198,17 +194,10 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
     public void Attack()
     {
         if (IsDead) { return; }
-        if (IsInAttackRange())
-        {
-            if (IsOffCooldown(AttackSpeed))
-            {
-                AttackWithCooldown(Universal.Attack);
-                closestEnemie.TakeDamage(baseDamage);
-            }
-        }
-        else if (IsOffCooldown(AttackSpeed))
+        if (IsOffCooldown(AttackSpeed))
         {
             AttackWithCooldown(Universal.Attack);
+            isAttacking = true;
         }
     }
 
@@ -220,7 +209,7 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
             if (Time.time - LastSuperTime > SuperAttackSpeed)
             {
                 AttackWithCooldown(PlayerCharacter.SuperAttack);
-                closestEnemie.TakeDamage(SuperAttackDamage);
+                isSuperAttacking = true;
             }
         }
     }
@@ -246,6 +235,23 @@ public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
             LastAttackTime = Time.time;
         }
         _animatorController.SetTrigger(attackName);
+    }
+
+    // Used by Animation Events
+    public void DealDamage()
+    {
+        isAttacking = false;
+        if (IsInAttackRange())
+        {
+            closestEnemie.TakeDamage(baseDamage);
+        }
+    }
+
+    // Used by Animation Events
+    public void DealSuperDamage()
+    {
+        isSuperAttacking = false;
+        closestEnemie.TakeDamage(SuperAttackDamage);
     }
 
     public void Move()

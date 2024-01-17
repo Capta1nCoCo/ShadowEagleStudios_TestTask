@@ -92,6 +92,10 @@ PrefabInstance:
       propertyPath: baseAttackSpeed
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 9057732657656489015, guid: 4c34fad82d8582f40a00c43d3128284a, type: 3}
+      propertyPath: restorePlayerHealth
+      value: 4
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

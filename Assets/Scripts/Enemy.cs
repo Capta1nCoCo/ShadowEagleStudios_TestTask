@@ -1,9 +1,11 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using static Constants.AnimationVarNames;
+using static UnityEditor.PlayerSettings;
 
 [RequireComponent(typeof(Animator), typeof(NavMeshAgent))]
-public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
+public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable, ISpawn
 {
     [Header("Base Stats")]
     [SerializeField] private float maxHealth;
@@ -11,12 +13,15 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
     [SerializeField] private float baseAttackSpeed = 1;
     [SerializeField] private float baseAttackRange = 2;
 
-    [SerializeField] private DeathSpawner spawn;
+    [Header("Heal On Death")]
+    [Tooltip("0 = no heal")]
+    [SerializeField] private float restorePlayerHealth = 1;
 
     private Animator _animatorController;
     private NavMeshAgent _navMeshAgent;
     private EnemySpawner _enemySpawner;
     private Player _player;
+    private DeathSpawner _deathSpawner;
 
     public float Health { get; set; }
     public bool IsDead { get; set; }
@@ -30,25 +35,30 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
     {
         _animatorController = GetComponent<Animator>();
         _navMeshAgent = GetComponent<NavMeshAgent>();
+        _deathSpawner = GetComponent<DeathSpawner>();
     }
 
-    public void Init(EnemySpawner enemySpawner)
+    private void OnDisable()
+    {
+        _navMeshAgent.ResetPath();
+    }
+
+    public void InitSpawn(EnemySpawner spawner, Vector3 pos)
     {
         if (_enemySpawner == null)
         {
-            _enemySpawner = enemySpawner;
+            _enemySpawner = spawner;
             _player = Player.Instance;
         }
         _enemySpawner.AddEnemy(this);
-        _navMeshAgent.SetDestination(_player.transform.position);
         InitStats();
-        ResetForReuse();
+        StartCoroutine(WarpWithDelay(pos));
+        StartCoroutine(SetDestinationWithDelay());
     }
 
     private void InitStats()
     {
         Health = maxHealth;
-        IsDead = false;
         Damage = baseDamage;
         AttackSpeed = baseAttackSpeed;
         AttackRange = baseAttackRange;
@@ -56,10 +66,19 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         MovementSpeed = 0;
     }
 
-    private void ResetForReuse()
+    private IEnumerator WarpWithDelay(Vector3 pos)
     {
+        yield return new WaitForEndOfFrame();
+        _navMeshAgent.Warp(pos);
+    }
+
+    private IEnumerator SetDestinationWithDelay()
+    {
+        yield return new WaitForEndOfFrame();
+        IsDead = false;
         _animatorController.Play(Universal.Idle);
         _navMeshAgent.isStopped = false;
+        _navMeshAgent.SetDestination(_player.transform.position);
     }
 
     private void Update()
@@ -76,26 +95,33 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         {
             Die();
         }
+        else
+        {
+            _animatorController.SetTrigger(EnemyCharacter.GetHit);
+        }
     }
 
     public void Die()
     {
+        SpawnOnDeath();
         _enemySpawner.RemoveEnemy(this);
         IsDead = true;
         _animatorController.SetTrigger(Universal.Die);
         _navMeshAgent.isStopped = true;
-        GameEvents.OnEnemyDeath?.Invoke();
-        // TODO: Decouple
-        if (spawn != null)
+        _player.RestoreHealth(restorePlayerHealth);
+    }
+
+    private void SpawnOnDeath()
+    {
+        if (_deathSpawner != null)
         {
-            spawn.SpawnEnemiesInDeathArea();
+            _deathSpawner.SpawnEnemiesInDeathArea();
         }
     }
 
     private void AI()
     {
-        float distance = Vector3.Distance(transform.position, _player.transform.position);
-        if (distance <= AttackRange)
+        if (IsInAttackRange())
         {
             AutoAttacking();
         }
@@ -104,6 +130,12 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
             Move();
         }
         ApplyMovementAnimation();
+    }
+
+    private bool IsInAttackRange()
+    {
+        float distance = Vector3.Distance(transform.position, _player.transform.position);
+        return distance <= AttackRange;
     }
 
     private void AutoAttacking()
@@ -118,8 +150,16 @@ public class Enemy : MonoBehaviour, IDamageable, IAttacker, IMovable
         if (Time.time - LastAttackTime > AttackSpeed)
         {
             LastAttackTime = Time.time;
-            _player.TakeDamage(Damage);
             _animatorController.SetTrigger(Universal.Attack);
+        }
+    }
+
+    // Used by Animation Events
+    public void DealDamage()
+    {
+        if (IsInAttackRange())
+        {
+            _player.TakeDamage(Damage);
         }
     }
 

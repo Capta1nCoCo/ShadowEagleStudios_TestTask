@@ -15,7 +15,8 @@ public class HealthDisplay : DisplayTextUI
 
     private void UpdateHealthDisplay(float health)
     {
-        string text = $"HP: {Mathf.RoundToInt(health)}";
+        int roundedHealth = Mathf.Sign(health) == -1 ? 0 : Mathf.RoundToInt(health);
+        string text = $"HP: {roundedHealth}";
         UpdateDisplayText(text);
     }
 }

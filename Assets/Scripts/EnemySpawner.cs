@@ -6,7 +6,12 @@ public class EnemySpawner : MonoBehaviour
 {
     [SerializeField] private LevelConfig Config;
 
+    [Header("Spawn Position Params")]
+    [SerializeField] private float defaultPosDelta = 10f;
+    [SerializeField] private float relativePosDelta = 2f;
+
     private int currWave = 0;
+    private Vector3 lastSpawnPos;
 
     private List<Enemy> Enemies = new List<Enemy>();
 
@@ -22,12 +27,14 @@ public class EnemySpawner : MonoBehaviour
     public void RemoveEnemy(Enemy enemy)
     {
         Enemies.Remove(enemy);
-        if (enemy.GetComponent<DeathSpawner>() != null)
-        {
-            return;
-        }
+        SpawnNewWave();
+    }
+
+    private void SpawnNewWave()
+    {
         if (Enemies.Count == 0)
         {
+            lastSpawnPos = Vector3.zero;
             SpawnWave();
         }
     }
@@ -60,13 +67,13 @@ public class EnemySpawner : MonoBehaviour
         Wave wave = Config.getWaves[currWave];
         foreach (EnemyParams enemyParams in wave.getEnemyParams)
         {
-            ProcessEnemyParams(enemyParams, Vector3.zero);
+            ProcessEnemyParams(enemyParams, lastSpawnPos);
         }
         currWave++;
         GameEvents.OnWaveSpawned?.Invoke(currWave, numWaves);
     }
 
-    private void ProcessEnemyParams(EnemyParams enemyParams, Vector3 pos)
+    public void ProcessEnemyParams(EnemyParams enemyParams, Vector3 pos)
     {
         int enemyQuantity = enemyParams.getQuantity;
         EnemyType enemyType = enemyParams.getEnemyType;
@@ -80,12 +87,16 @@ public class EnemySpawner : MonoBehaviour
     {
         for (int i = 0; i < enemyQuantity; i++)
         {
-            Vector3 spawnPos = pos == Vector3.zero ? new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10)) :
-                new Vector3(pos.x + Random.Range(-3, 3), 0, pos.z + Random.Range(-3, 3));
+            Vector3 spawnPos = GetRandomRelativePos(pos);
             var enemy = _enemyPool.GetEnemyByType(enemyType);
-            enemy.transform.position = spawnPos;
             enemy.transform.rotation = Quaternion.identity;
-            enemy.GetComponent<Enemy>()?.Init(this);
+            enemy.GetComponent<ISpawn>()?.InitSpawn(this, spawnPos);
         }
+    }
+
+    private Vector3 GetRandomRelativePos(Vector3 pos)
+    {
+        return pos == Vector3.zero ? new Vector3(Random.Range(-defaultPosDelta, defaultPosDelta), 0, Random.Range(-defaultPosDelta, defaultPosDelta)) :
+                        new Vector3(pos.x + Random.Range(-relativePosDelta, relativePosDelta), 0, pos.z + Random.Range(-relativePosDelta, relativePosDelta));
     }
 }
