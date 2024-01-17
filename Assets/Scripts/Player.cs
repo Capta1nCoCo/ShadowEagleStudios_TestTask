@@ -4,16 +4,28 @@ using Zenject;
 using static Constants.AnimationVarNames;
 
 [RequireComponent(typeof(Animator))]
-public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
+public class Player : MonoBehaviour, IDamageable, ISuperAttacker, IMovable
 {
     public static Player Instance { get; private set; }
 
+    [Header("General Stats")]
     [SerializeField] private float maxHealth;
+    [SerializeField] private float baseMovementSpeed = 5f;
+
+    [Header("Basic Attack")]
     [SerializeField] private float baseDamage = 1;
     [SerializeField] private float baseAttackSpeed = 1;
     [SerializeField] private float baseAttackRange = 2;
-    [SerializeField] private float baseMovementSpeed = 5f;
-    
+
+    [Header("Super Attack")]
+    [SerializeField] private float superDamage = 2;
+    [SerializeField] private float superAttackSpeed = 2;
+
+    private Enemy closestEnemie;
+    private float distance;
+    private bool isAttacking;
+    private bool isSuperAttacking;
+
     private Animator _animatorController;
     private EnemySpawner _enemySpawner;
 
@@ -24,6 +36,9 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
     public float AttackRange { get; set; }
     public float LastAttackTime { get; set; }
     public float MovementSpeed { get; set; }
+    public float SuperAttackSpeed { get; set; }
+    public float SuperAttackDamage { get; set; }
+    public float LastSuperTime { get; set; }
 
     [Inject]
     public void InjectDependencies(EnemySpawner enemySpawner)
@@ -35,6 +50,22 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
     {
         _animatorController = GetComponent<Animator>();
         ApplySingleton();
+    }
+
+    private void Start()
+    {
+        Init();
+    }
+
+    private void Update()
+    {
+        if (IsDead) { return; }
+        GameEvents.OnCooldown?.Invoke();
+        if (!isAttacking || !isSuperAttacking)
+        {
+            FindClosestEnemy();
+        }
+        Move();
     }
 
     private void ApplySingleton()
@@ -49,12 +80,13 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
         }
     }
 
-    private void Start()
+    private void Init()
     {
-        Init();
+        AssignStats();
+        InvokeInitEvents();
     }
 
-    private void Init()
+    private void AssignStats()
     {
         Health = maxHealth;
         IsDead = false;
@@ -63,19 +95,22 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
         AttackRange = baseAttackRange;
         LastAttackTime = 0;
         MovementSpeed = baseMovementSpeed;
+        SuperAttackSpeed = superAttackSpeed;
+        SuperAttackDamage = superDamage;
+        LastSuperTime = 0;
     }
 
-    private void Update()
+    private void InvokeInitEvents()
     {
-        if (IsDead) { return; }
-        Attack();
-        Move();
+        GameEvents.OnHealthChanged?.Invoke(Health);
+        GameEvents.OnPlayerInit?.Invoke();
     }
 
     public void TakeDamage(float damage)
     {
         if (IsDead) { return; }
         Health -= damage;
+        GameEvents.OnHealthChanged?.Invoke(Health);
         if (Health <= 0)
         {
             Die();
@@ -89,92 +124,99 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
         GameEvents.OnDefeat?.Invoke();
     }
 
-    public void Attack()
+    public void RestoreHealth(float amount)
     {
-        LockOnClosestEnemy(FindClosestEnemy());
+        Health += amount;
+        if (Health > maxHealth)
+        {
+            Health = maxHealth;
+        }
+        GameEvents.OnHealthChanged?.Invoke(Health);
     }
 
-    private Enemy FindClosestEnemy()
+    private void FindClosestEnemy()
     {
         List<Enemy> enemies = _enemySpawner.getEnemies;
-        Enemy closestEnemie = null;
+        closestEnemie = null;
 
         for (int i = 0; i < enemies.Count; i++)
         {
-            var enemie = enemies[i];
-            if (enemie == null)
+            var enemy = enemies[i];
+            if (enemy == null)
             {
                 continue;
             }
 
             if (closestEnemie == null)
             {
-                closestEnemie = enemie;
+                closestEnemie = enemy;
                 continue;
             }
 
-            float distance = Vector3.Distance(transform.position, enemie.transform.position);
-            float closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-            if (distance < closestDistance)
-            {
-                closestEnemie = enemie;
-            }
+            AssignClosestEnemy(enemy);
         }
 
-        return closestEnemie;
+        LockOnClosestEnemy();
     }
 
-    private void LockOnClosestEnemy(Enemy closestEnemie)
+    private void AssignClosestEnemy(Enemy enemie)
+    {
+        float distance = Vector3.Distance(transform.position, enemie.transform.position);
+        float closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
+        if (distance < closestDistance)
+        {
+            closestEnemie = enemie;
+        }
+    }
+
+    private void LockOnClosestEnemy()
     {
         if (closestEnemie != null)
         {
-            float distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
+            distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
             transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
-            ProcessAttack(closestEnemie, distance);
+            ProcessAttack();
         }
     }
 
-    private void ProcessAttack(Enemy closestEnemie, float distance)
+    private void ProcessAttack()
     {
-        bool isAttackOffCooldown = IsOffCooldown(baseAttackSpeed);
-        bool isInAttackRange = distance <= baseAttackRange;
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            RegularAttack(closestEnemie, isAttackOffCooldown, isInAttackRange);
+            Attack();
         }
         else if (Input.GetKeyDown(KeyCode.Mouse1))
         {
-            SuperAttack(closestEnemie, isInAttackRange);
+            SuperAttack();
         }
     }
 
-    private void RegularAttack(Enemy closestEnemie, bool isAttackOffCooldown, bool isInAttackRange)
+    public void Attack()
     {
-        if (isInAttackRange)
-        {
-            if (isAttackOffCooldown)
-            {
-                AttackWithCooldown(Universal.Attack);
-                closestEnemie.TakeDamage(baseDamage);
-            }
-        }
-        else if (isAttackOffCooldown)
+        if (IsDead) { return; }
+        if (IsOffCooldown(AttackSpeed))
         {
             AttackWithCooldown(Universal.Attack);
+            isAttacking = true;
         }
     }
 
-    private void SuperAttack(Enemy closestEnemie, bool isInAttackRange)
+    public void SuperAttack()
     {
-        const float superAttackMultiplier = 2;
-        if (isInAttackRange)
+        if (IsDead) { return; }
+        if (IsInAttackRange())
         {
-            if (IsOffCooldown(AttackSpeed * superAttackMultiplier))
+            if (Time.time - LastSuperTime > SuperAttackSpeed)
             {
                 AttackWithCooldown(PlayerCharacter.SuperAttack);
-                closestEnemie.TakeDamage(baseDamage * superAttackMultiplier);
+                isSuperAttacking = true;
             }
         }
+    }
+
+    private bool IsInAttackRange()
+    {
+        return distance <= baseAttackRange;
     }
 
     private bool IsOffCooldown(float cooldown)
@@ -184,8 +226,32 @@ public class Player : MonoBehaviour, IDamageable, IAttacker, IMovable
 
     private void AttackWithCooldown(string attackName)
     {
-        LastAttackTime = Time.time;
+        if (attackName == PlayerCharacter.SuperAttack)
+        {
+            LastSuperTime = Time.time;
+        }
+        else
+        {
+            LastAttackTime = Time.time;
+        }
         _animatorController.SetTrigger(attackName);
+    }
+
+    // Used by Animation Events
+    public void DealDamage()
+    {
+        isAttacking = false;
+        if (IsInAttackRange())
+        {
+            closestEnemie.TakeDamage(baseDamage);
+        }
+    }
+
+    // Used by Animation Events
+    public void DealSuperDamage()
+    {
+        isSuperAttacking = false;
+        closestEnemie.TakeDamage(SuperAttackDamage);
     }
 
     public void Move()

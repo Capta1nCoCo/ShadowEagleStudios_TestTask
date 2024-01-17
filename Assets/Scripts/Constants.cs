@@ -14,5 +14,10 @@ public static class Constants
         {
             public const string SuperAttack = "SuperAttack";
         }
+
+        public static class EnemyCharacter
+        {
+            public const string GetHit = "GetHit";
+        }
     }
 }

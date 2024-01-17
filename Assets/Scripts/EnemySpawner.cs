@@ -1,13 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Zenject;
 
 [RequireComponent(typeof(EnemyPool))]
 public class EnemySpawner : MonoBehaviour
 {
     [SerializeField] private LevelConfig Config;
 
+    [Header("Spawn Position Params")]
+    [SerializeField] private float defaultPosDelta = 10f;
+    [SerializeField] private float relativePosDelta = 2f;
+
     private int currWave = 0;
+    private Vector3 lastSpawnPos;
 
     private List<Enemy> Enemies = new List<Enemy>();
 
@@ -15,16 +19,22 @@ public class EnemySpawner : MonoBehaviour
 
     public List<Enemy> getEnemies { get { return Enemies; } }
 
-    public void AddEnemie(Enemy enemy)
+    public void AddEnemy(Enemy enemy)
     {
         Enemies.Add(enemy);
     }
 
-    public void RemoveEnemie(Enemy enemy)
+    public void RemoveEnemy(Enemy enemy)
     {
         Enemies.Remove(enemy);
+        SpawnNewWave();
+    }
+
+    private void SpawnNewWave()
+    {
         if (Enemies.Count == 0)
         {
+            lastSpawnPos = Vector3.zero;
             SpawnWave();
         }
     }
@@ -32,6 +42,12 @@ public class EnemySpawner : MonoBehaviour
     private void Awake()
     {
         _enemyPool = GetComponent<EnemyPool>();
+        GameEvents.OnDeathSpawn += ProcessEnemyParams;
+    }
+
+    private void OnDestroy()
+    {
+        GameEvents.OnDeathSpawn -= ProcessEnemyParams;
     }
 
     private void Start()
@@ -41,7 +57,8 @@ public class EnemySpawner : MonoBehaviour
 
     private void SpawnWave()
     {
-        if (currWave >= Config.getWaves.Length)
+        int numWaves = Config.getWaves.Length;
+        if (currWave >= numWaves)
         {
             GameEvents.OnVictory?.Invoke();
             return;
@@ -50,20 +67,36 @@ public class EnemySpawner : MonoBehaviour
         Wave wave = Config.getWaves[currWave];
         foreach (EnemyParams enemyParams in wave.getEnemyParams)
         {
-            int enemyQuantity = enemyParams.getQuantity;
-            EnemyType enemyType = enemyParams.getEnemyType;
-            if (enemyQuantity > 0 && enemyType != EnemyType.None)
-            {
-                for (int i = 0; i < enemyQuantity; i++)
-                {
-                    Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
-                    var enemy = _enemyPool.GetEnemyByType(enemyType);
-                    enemy.transform.position = pos;
-                    enemy.transform.rotation = Quaternion.identity;
-                    enemy.GetComponent<Enemy>()?.Init(this);
-                }
-            }
+            ProcessEnemyParams(enemyParams, lastSpawnPos);
         }
         currWave++;
+        GameEvents.OnWaveSpawned?.Invoke(currWave, numWaves);
+    }
+
+    public void ProcessEnemyParams(EnemyParams enemyParams, Vector3 pos)
+    {
+        int enemyQuantity = enemyParams.getQuantity;
+        EnemyType enemyType = enemyParams.getEnemyType;
+        if (enemyQuantity > 0 && enemyType != EnemyType.None)
+        {
+            SpawnEnemies(enemyQuantity, enemyType, pos);
+        }
+    }
+
+    private void SpawnEnemies(int enemyQuantity, EnemyType enemyType, Vector3 pos)
+    {
+        for (int i = 0; i < enemyQuantity; i++)
+        {
+            Vector3 spawnPos = GetRandomRelativePos(pos);
+            var enemy = _enemyPool.GetEnemyByType(enemyType);
+            enemy.transform.rotation = Quaternion.identity;
+            enemy.GetComponent<ISpawn>()?.InitSpawn(this, spawnPos);
+        }
+    }
+
+    private Vector3 GetRandomRelativePos(Vector3 pos)
+    {
+        return pos == Vector3.zero ? new Vector3(Random.Range(-defaultPosDelta, defaultPosDelta), 0, Random.Range(-defaultPosDelta, defaultPosDelta)) :
+                        new Vector3(pos.x + Random.Range(-relativePosDelta, relativePosDelta), 0, pos.z + Random.Range(-relativePosDelta, relativePosDelta));
     }
 }
